@@ -5,12 +5,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"github.com/davecheney/profile"
 	"image"
 	"image/color"
 	"image/png"
-	"log"
-	"math/cmplx"
+	"math"
 	"os"
 )
 
@@ -44,17 +43,32 @@ func (n *Newton) At(x, y int) color.Color {
 		for c[i] = n.N; c[i] > 0; c[i]-- {
 			z0 := z
 			z -= (z*z*z - v) / (3 * z * z)
-			if cmplx.Abs(z-z0) < 1e-7 {
+			if math.Abs(real(z)-real(z0)) < 1e-7 {
 				break
 			}
 		}
 	}
 
-	adj := func(a int) uint8 { return uint8((0xff * a) / n.N) }
+	var shift uint
+	for i := n.N-1; i > 0; i>>=1 {
+		shift++
+	}
+	adj := func(a int) uint8 {
+		foo := uint8(a&1)
+		return uint8((a<<8)>>shift)|foo
+		// or use return uint8((a*255)/n.N)
+	}
 	return color.NRGBA{adj(c[2]), adj(c[0]), adj(c[1]), 0xff}
 }
 
 func main() {
+	cfg := profile.Config {
+		CPUProfile : true,
+		MemProfile : true,
+		BlockProfile : true,
+	}
+	defer profile.Start(&cfg).Stop()
+
 	var z0r *float64 = flag.Float64("z0r", -3, "z0 real part")
 	var z0i *float64 = flag.Float64("z0i", -3, "z0 imaginary part")
 	var z1r *float64 = flag.Float64("z1r", 3, "z1 real part")
@@ -66,11 +80,5 @@ func main() {
 	z1 := complex(*z1r, *z1i)
 	dz := z1 - z0
 	n := NewNewton(2048, 2048, z0, dz, 64)
-	name := fmt.Sprintf("newton%+f%+fi%+f%+fi.png", real(z0), imag(z0), real(z1), imag(z1))
-	if store, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0666); err == nil {
-		defer store.Close()
-		png.Encode(store, n)
-	} else {
-		log.Println("newton: ", err)
-	}
+	png.Encode(os.Stdout, n)
 }
