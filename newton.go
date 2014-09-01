@@ -33,7 +33,6 @@ func (n *Newton) ColorModel() color.Model {
 }
 
 func (n *Newton) At(x, y int) color.Color {
-	// log.Println("Newton:At")
 	fx := float64(x) / float64(n.Dx)
 	fy := float64(y) / float64(n.Dy)
 
@@ -42,18 +41,15 @@ func (n *Newton) At(x, y int) color.Color {
 	c := []int{0, 0, 0}
 	for i, v := range r {
 		z := Z
-		// log.Println(i, v)
 		for c[i] = n.N; c[i] > 0; c[i]-- {
 			z0 := z
 			z -= (z*z*z - v) / (3 * z * z)
 			if cmplx.Abs(z-z0) < 1e-7 {
 				break
 			}
-			// log.Println(i, c[i], z-z0)
 		}
 	}
 
-	// log.Println(c)
 	adj := func(a int) uint8 { return uint8((0xff * a) / n.N) }
 	return color.NRGBA{adj(c[2]), adj(c[0]), adj(c[1]), 0xff}
 }
